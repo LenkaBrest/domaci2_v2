@@ -65,9 +65,7 @@ static struct timer_info *tp = NULL;
 //static int i_cnt = 0;
 
 unsigned int flag = 0;
-int sec = 0;
-int mins = 0;
-int hours = 0;
+
 
 
 
@@ -381,11 +379,11 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset) 
 {
 	char buff[BUFF_SIZE];
-	/*
+	
 	int sec = 0;
 	int mins = 0;
 	int hours = 0;
-	int days = 0;*/
+	int days = 0;
 	int ret = 0;
 	
 	printk(KERN_INFO "timer write");
@@ -396,7 +394,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	
 	if(strncmp(buff, "start", 5) == 0)
 	{
-		if((flag = 0) && (sec > 0))
+		if((flag = 0))
 		{
 			flag = 1;
 			start_timer();
