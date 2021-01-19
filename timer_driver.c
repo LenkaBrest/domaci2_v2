@@ -144,6 +144,8 @@ unsigned long read_timer_status()
 	
 	data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR1_OFFSET);
 	data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR0_OFFSET);
+		printk(KERN_INFO "data_high=%d", data_high);
+		printk(KERN_INFO "data_low=%d", data_low);
 	
 	status = (unsigned long) data_high;
 	status <<= 32;
@@ -333,7 +335,10 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 	char buff[BUFF_SIZE];
 	
 	status = read_timer_status();
-	
+
+	status = status/100000000;
+	printk(KERN_INFO "%u", status);
+
 	days = status/(60*60*24);
 	hours = (status-days*60*60*24)/(60*60);
 	mins = (status-days*60*60*24-hours*60*60)/60;
