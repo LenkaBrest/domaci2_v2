@@ -394,7 +394,8 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	
 	if(strncmp(buff, "start", 5) == 0)
 	{
-		if((flag = 0))
+		printk(KERN_INFO "flag=%d", flag);
+		if(flag == 0)
 		{
 			flag = 1;
 			start_timer();
