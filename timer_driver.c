@@ -145,9 +145,9 @@ unsigned long read_timer_status(void)
 	data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR1_OFFSET);
 	data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR0_OFFSET);
 	
-	status = data_high;
+	status = (unsigned long) data_high;
 	status <<= 32;
-	status += data_low;
+	status += (unsigned long) data_low;
 	
 }
 
@@ -371,7 +371,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 			setup_timer(sec);
 
 	}
-	else if(strcmp(buff, "start") == 0)
+	else if(strncmp(buff, "start", 5) == 0)
 	{
 		if((flag = 0) && (sec>0))
 		{
