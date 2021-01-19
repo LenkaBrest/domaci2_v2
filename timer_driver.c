@@ -136,7 +136,7 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 	return IRQ_HANDLED;
 }
 
-unsigned long read_timer_status(void)
+unsigned long read_timer_status()
 {
 	unsigned long status = 0;
 	unsigned int data_high = 0;
@@ -149,6 +149,7 @@ unsigned long read_timer_status(void)
 	status <<= 32;
 	status += (unsigned long) data_low;
 	
+	return status;
 }
 
 //***************************************************
@@ -159,11 +160,11 @@ static void setup_timer(unsigned long seconds)
 	// Disable Timer Counter
 	unsigned int timer_load_low;
 	unsigned int timer_load_high;
-	unsigned int zero = 0;
+	//unsigned int zero = 0;
 	unsigned int data_low = 0;
 	unsigned int data_high = 0;
 	timer_load_low = (unsigned int) (seconds*100000*1000);
-	timer_load_low = (unsigned int) ((seconds*100000*1000)>>32);
+	timer_load_high = (unsigned int) ((seconds*100000*1000)>>32);
 
 	// Disable timer/counter while configuration is in progress
 	data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR1_OFFSET);
@@ -338,13 +339,13 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 	mins = (status-days*60*60*24-hours*60*60)/60;
 	secs = status-days*60*60*24-hours*60*60-mins*60;
 	
-	len = scnprintf(buff, BUFF_SIZE, "%lu %lu %lu %lu\n", days, hours,mins,secs);
+	len = scnprintf(buff, BUFF_SIZE, "%u:%u:%u:%u\n", days, hours,mins,secs);
 	ret = copy_to_user(buffer, buff, len);
 	
 	if(ret)
 		return -EFAULT;
 		
-	printk(KERN_INFO "Remaining time is: %lu:%lu:%lu:%lu\n", days, hours, mins, secs);
+	printk(KERN_INFO "Remaining time is: %u:%u:%u:%u\n", days, hours, mins, secs);
 	
 	return 0;
 }
@@ -362,7 +363,33 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	if(ret)
 		return -EFAULT;
 	buff[length] = '\0';
+	
+	if(strncmp(buff, "start", 5) == 0)
+	{
+		if((flag = 0) && (sec>0))
+		{
+			flag = 1;
+			start_timer();
+			printk(KERN_INFO "Timer is starting");
+		}
+		else
+			printk(KERN_INFO "Timer is started");
+		
+	}
+	else
+	{
+		ret = sscanf(buff,"%d:%d:%d:%d",&days,&hours, &mins, &sec);
+		if(ret == 4)//two parameters parsed in sscanf
+		{
 
+			sec = sec + mins*60 + hours*60*60 + days*24*60*60;
+			setup_timer(sec);
+
+		}
+		else
+		printk(KERN_WARNING "xilaxitimer_write: Wrong format, expected n,t \n\t n-number of interrupts\n\t t-time in ms between interrupts\n");
+	}
+	/*
 	ret = sscanf(buff,"%d:%d:%d:%d",&days,&hours, &mins, &sec);
 	if(ret == 4)//two parameters parsed in sscanf
 	{
@@ -386,7 +413,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	else
 	{
 		printk(KERN_WARNING "xilaxitimer_write: Wrong format, expected n,t \n\t n-number of interrupts\n\t t-time in ms between interrupts\n");
-	}
+	}*/
 	return length;
 }
 
