@@ -64,6 +64,8 @@ static struct timer_info *tp = NULL;
 //static int i_num = 1;
 //static int i_cnt = 0;
 
+unsigned int flag = 0;
+
 
 static irqreturn_t xilaxitimer_isr(int irq,void*dev_id);
 static void setup_timer(unsigned long seconds);
@@ -124,6 +126,7 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 	if(data_high == 0)
 	{
 		printk(KERN_INFO "xilaxitimer_isr: Time expired\n");
+		flag = 0;
 		
 		data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR1_OFFSET);
 		iowrite32(data_high & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR1_OFFSET);
@@ -211,7 +214,23 @@ static void start_timer(void)
 	data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 	iowrite32(data_low | XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
+	printk(KERN_INFO "Timer is started");
 
+}
+
+static void stop_timer(void)
+{
+	unsigned int data_low = 0;
+	unsigned int data_high = 0;
+
+	// Disable timer/counter while configuration is in progress
+	data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR1_OFFSET);
+	iowrite32(data_high & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK),
+			tp->base_addr + XIL_AXI_TIMER_TCSR1_OFFSET);
+	data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
+	iowrite32(data_low & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK),
+			tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
+				
 }
 
 //***************************************************
@@ -363,7 +382,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	int hours = 0;
 	int days = 0;
 	int ret = 0;
-	int flag = 0;
+	
 	printk(KERN_INFO "timer write");
 	ret = copy_from_user(buff, buffer, length);
 	if(ret)
@@ -379,8 +398,13 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 			printk(KERN_INFO "Timer is starting");
 		}
 		else
-			printk(KERN_INFO "Timer is started");
+			printk(KERN_INFO "Timer is already started");
 		
+	}
+	else if(strncmp(buff, "stop", 4) == 0)
+	{
+		flag = 0;
+		stop_timer();
 	}
 	else
 	{
