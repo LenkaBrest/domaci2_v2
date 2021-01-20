@@ -67,7 +67,7 @@ static struct timer_info *tp = NULL;
 //static int i_cnt = 0;
 
 unsigned int flag_start = 0;
-
+unsigned int flag_stop = 1;
 
 
 
@@ -388,7 +388,6 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	int mins = 0;
 	int hours = 0;
 	int days = 0;
-	int flag_stop = 1;
 	u64 time = 0;
 	int ret = 0;
 	
@@ -401,7 +400,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	if(strncmp(buff, "start", 5) == 0)
 	{
 		//printk(KERN_INFO "flag=%d", flag);
-		if(flag_start == 0)
+		if((flag_start == 0) && (div_u64(read_timer_status(), 100000000) > 0) )
 		{
 			printk(KERN_INFO "Timer is starting");
 			flag_start = 1;
@@ -409,7 +408,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 			start_timer();			
 		}
 		else
-			printk(KERN_INFO "Timer is already started");
+			printk(KERN_INFO "Timer is already started or time has expired");
 		
 	}
 	else if(strncmp(buff, "stop", 4) == 0)
@@ -431,7 +430,10 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 		{
 
 			time =(u64) (sec + mins*60 + hours*60*60 + days*24*60*60);
-			setup_timer(time);
+			if(time > 0)
+				setup_timer(time);
+			else
+				printk(KERN_INFO "Time expressions should be greater than zero");
 
 		}
 		else
