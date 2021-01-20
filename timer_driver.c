@@ -18,6 +18,8 @@
 
 #include <linux/interrupt.h> //irqreturn_t, request_irq
 
+#include<asm/div64.h>
+
 // REGISTER CONSTANTS
 #define XIL_AXI_TIMER_TCSR0_OFFSET	0x0
 #define XIL_AXI_TIMER_TLR0_OFFSET		0x4
@@ -359,7 +361,7 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 	
 	status = read_timer_status();
 
-	status = status/100000000;
+	status =div_u64( status, 100000000 );
 	printk(KERN_INFO "%llu", status);
 
 	days = (unsigned int)status/(60*60*24);
