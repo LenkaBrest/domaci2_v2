@@ -124,8 +124,14 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 	//data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR0_OFFSET);
 	
 	data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
-		iowrite32(data_low | XIL_AXI_TIMER_CSR_INT_OCCURED_MASK,
+	iowrite32(data_low | XIL_AXI_TIMER_CSR_INT_OCCURED_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
+	
+	
+	if(data_high != ioread32(tp->base_addr + XIL_AXI_TIMER_TCR1_OFFSET))
+	{
+		data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR0_OFFSET);
+	}
 	
 		printk(KERN_INFO "xilaxitimer_isr: Time expired\n");
 		flag_start = 0;
