@@ -434,13 +434,17 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 		ret = sscanf(buff,"%d:%d:%d:%d",&days,&hours, &mins, &sec);
 		if(ret == 4)//two parameters parsed in sscanf
 		{
-
-			time =(u64) (sec + mins*60 + hours*60*60 + days*24*60*60);
-			if(time > 0)
-				setup_timer(time);
+			if( (sec>59) || (mins>59) || (hours>24) || (days>2135039))
+				printk(KERN_INFO "Seconds should be smaller then 60, mins should be smaller then 60, hours should be smaller then 24, days should be smaller then 2135039");
 			else
-				printk(KERN_INFO "Time expressions should be greater than zero");
+			{
+				time =(u64) (sec + mins*60 + hours*60*60 + days*24*60*60);
+				if(time > 0)
+					setup_timer(time);
+				else
+					printk(KERN_INFO "Time expressions should be greater then zero");
 
+			}
 		}
 		else
 		printk(KERN_WARNING "xilaxitimer_write: Wrong format, expected n,t \n\t n-number of interrupts\n\t t-time in ms between interrupts\n");
