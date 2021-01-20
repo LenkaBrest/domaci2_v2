@@ -70,9 +70,9 @@ unsigned int flag = 0;
 
 
 static irqreturn_t xilaxitimer_isr(int irq,void*dev_id);
-static void setup_timer(unsigned long seconds);
+static void setup_timer(u64 seconds);
 static void start_timer(void);
-unsigned long read_timer_status(void);
+u64 read_timer_status(void);
 static int timer_probe(struct platform_device *pdev);
 static int timer_remove(struct platform_device *pdev);
 int timer_open(struct inode *pinode, struct file *pfile);
@@ -125,8 +125,6 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 		iowrite32(data_low | XIL_AXI_TIMER_CSR_INT_OCCURED_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 	
-	if(data_high == 0)
-	{
 		printk(KERN_INFO "xilaxitimer_isr: Time expired\n");
 		flag = 0;
 		
@@ -135,15 +133,15 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 		data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 		iowrite32(data_low & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR0_OFFSET);
 		
-	}
+	
 
 	
 	return IRQ_HANDLED;
 }
 
-unsigned long read_timer_status()
+u64 read_timer_status()
 {
-	unsigned long status = 0;
+	u64 status = 0;
 	unsigned int data_high = 0;
 	unsigned int data_low = 0;
 	
@@ -152,9 +150,13 @@ unsigned long read_timer_status()
 		printk(KERN_INFO "data_high=%d", data_high);
 		printk(KERN_INFO "data_low=%d", data_low);
 	
-	status = (unsigned long) data_high;
+	if(data_high != ioread32(tp->base_addr + XIL_AXI_TIMER_TCR1_OFFSET))
+	{
+		data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCR0_OFFSET);
+	}
+	status = (u64) data_high;
 	status <<= 32;
-	status += (unsigned long) data_low;
+	status += (u64) data_low;
 	
 	return status;
 }
@@ -162,7 +164,7 @@ unsigned long read_timer_status()
 //***************************************************
 //HELPER FUNCTION THAT RESETS AND STARTS TIMER WITH PERIOD IN MILISECONDS
 
-static void setup_timer(unsigned long seconds)
+static void setup_timer(u64 seconds)
 {
 	// Disable Timer Counter
 	unsigned int timer_load_low;
@@ -182,9 +184,9 @@ static void setup_timer(unsigned long seconds)
 			tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 			
 			
-	// Set initial value in load register
-	iowrite32(timer_load_high, tp->base_addr + XIL_AXI_TIMER_TLR1_OFFSET);
+	// Set initial value in load register	
 	iowrite32(timer_load_low, tp->base_addr + XIL_AXI_TIMER_TLR0_OFFSET);
+	iowrite32(timer_load_high, tp->base_addr + XIL_AXI_TIMER_TLR1_OFFSET);
 
 	// Load initial value into counter from load register
 	data_high = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR1_OFFSET);
@@ -346,7 +348,7 @@ int timer_close(struct inode *pinode, struct file *pfile)
 
 ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_t *offset) 
 {
-	unsigned long status = 0;
+	u64 status = 0;
 	unsigned int days = 0;
 	unsigned int hours = 0;
 	unsigned int mins = 0;
@@ -358,12 +360,12 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 	status = read_timer_status();
 
 	status = status/100000000;
-	printk(KERN_INFO "%u", status);
+	printk(KERN_INFO "%llu", status);
 
-	days = status/(60*60*24);
-	hours = (status-days*60*60*24)/(60*60);
-	mins = (status-days*60*60*24-hours*60*60)/60;
-	secs = status-days*60*60*24-hours*60*60-mins*60;
+	days = (unsigned int)status/(60*60*24);
+	hours = (unsigned int)(status-days*60*60*24)/(60*60);
+	mins = (unsigned int)(status-days*60*60*24-hours*60*60)/60;
+	secs = (unsigned int) (status-days*60*60*24-hours*60*60-mins*60);
 	
 	len = scnprintf(buff, BUFF_SIZE, "%u:%u:%u:%u\n", days, hours,mins,secs);
 	ret = copy_to_user(buffer, buff, len);
@@ -384,6 +386,7 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 	int mins = 0;
 	int hours = 0;
 	int days = 0;
+	u64 time = 0;
 	int ret = 0;
 	
 	printk(KERN_INFO "timer write");
@@ -416,8 +419,8 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 		if(ret == 4)//two parameters parsed in sscanf
 		{
 
-			sec = sec + mins*60 + hours*60*60 + days*24*60*60;
-			setup_timer(sec);
+			time =(u64) (sec + mins*60 + hours*60*60 + days*24*60*60);
+			setup_timer(time);
 
 		}
 		else
