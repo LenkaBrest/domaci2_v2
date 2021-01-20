@@ -141,7 +141,7 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 		data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 		iowrite32(data_low & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR0_OFFSET);
 		
-	
+	setup_timer(0);
 
 	
 	return IRQ_HANDLED;
