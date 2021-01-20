@@ -68,7 +68,7 @@ static struct timer_info *tp = NULL;
 
 unsigned int flag_start = 0;
 unsigned int flag_stop = 1;
-
+unsigned int flag_input = 0;
 
 
 static irqreturn_t xilaxitimer_isr(int irq,void*dev_id);
@@ -140,8 +140,12 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 		iowrite32(data_high & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR1_OFFSET);
 		data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
 		iowrite32(data_low & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR0_OFFSET);
-		
-	setup_timer(0);
+
+		//data_low = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR0_OFFSET);
+		//iowrite32(data_low & ~(XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK), tp->base_addr +  XIL_AXI_TIMER_TCSR0_OFFSET);
+			
+	
+		setup_timer(0);
 
 	
 	return IRQ_HANDLED;
@@ -408,10 +412,15 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 		//printk(KERN_INFO "flag=%d", flag);
 		if((flag_start == 0) && (div_u64(read_timer_status(), 100000000) > 0) )
 		{
-			printk(KERN_INFO "Timer is starting");
-			flag_start = 1;
-			flag_stop = 0;
-			start_timer();			
+			if(flag_input == 1)
+			{
+				printk(KERN_INFO "Timer is starting");
+				flag_start = 1;
+				flag_stop = 0;
+				start_timer();
+			}
+			else
+				printk(KERN_INFO "Insert setup time before starting.");				
 		}
 		else
 			printk(KERN_INFO "Timer is already started or time has expired");
@@ -440,7 +449,15 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 			{
 				time =(u64) (sec + mins*60 + hours*60*60 + days*24*60*60);
 				if(time > 0)
-					setup_timer(time);
+				{
+					if(flag_start == 0)
+					{
+						flag_input = 1;
+						setup_timer(time);
+					}
+					else
+						printk(KERN_INFO "Timer is started. Wait time to expire or stop the timer");
+				}
 				else
 					printk(KERN_INFO "Time expressions should be greater then zero");
 
